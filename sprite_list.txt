@@ -25,6 +25,7 @@ sprite/0022/
 sprite/0023/
 sprite/0024/
 sprite/0025/
+sprite/0025/0006/
 sprite/0026/
 sprite/0026/0001/
 sprite/0027/
