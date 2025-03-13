@@ -52,10 +52,6 @@ def trim_transparency(image):
         return image.crop(bbox)
     return image
 
-def verify_image_dimensions(image_path, expected_width, expected_height):
-    image = Image.open(image_path)
-    return image.width == expected_width and image.height == expected_height
-
 def process_sprites(textfile, output_folder):
     os.makedirs(output_folder, exist_ok=True)
     processed_files = set(os.listdir(output_folder))
@@ -68,47 +64,30 @@ def process_sprites(textfile, output_folder):
         output_filename = sprite_path.strip("/").replace("/", "-") + ".png"
         output_path = os.path.join(output_folder, output_filename)
         
+        # Skip if file already exists
+        if output_filename in processed_files:
+            print(f"Skipping {sprite_path} (Already processed)")
+            continue
+        
         xml_url = get_github_raw_url(sprite_path, "AnimData.xml")
         
         # Get animdata first
         xml_content = download_file(xml_url)
         if not xml_content:
-            print(f"Missing AnimData.xml for {sprite_path}. Press Enter to continue...")
-            input()
+            print(f"Missing AnimData.xml for {sprite_path}. Skipping...")
             continue
         
         frame_width, frame_height, anim_name = parse_animdata(xml_content, target_anims)
         if not frame_width or not frame_height:
-            print(f"No valid animation found in AnimData.xml for {sprite_path}. Press Enter to continue...")
-            input()
+            print(f"No valid animation found in AnimData.xml for {sprite_path}. Skipping...")
             continue
-        
-        # If file exists, check if dimensions match
-        if output_filename in processed_files:
-            if verify_image_dimensions(output_path, frame_width, frame_height):
-                print(f"Skipping {sprite_path} (Already processed with correct dimensions)")
-                continue
-            else:
-                print(f"Redoing {sprite_path} (Incorrect dimensions detected)")
         
         # Try downloading based on the found animation name
         image_content = download_file(get_github_raw_url(sprite_path, f"{anim_name}-Anim.png"))
         
         if not image_content:
-            print(f"No default sprite found for {sprite_path}. Enter a different filename, or leave blank to skip.")
-            print(f"Suggested: {anim_name}-Anim.png")
-            filename = input("Filename: ")
-            
-            if not filename:
-                print(f"Skipping {sprite_path} (User skipped)")
-                continue
-            
-            image_content = download_file(get_github_raw_url(sprite_path, filename))
-            
-            if not image_content:
-                print(f"Invalid file. No sprite image found for {sprite_path}. Press Enter to continue...")
-                input()
-                continue
+            print(f"No default sprite found for {sprite_path}. Skipping...")
+            continue
         
         # Process the sprite
         cropped_image = crop_first_frame(image_content, frame_width, frame_height)
